@@ -1,0 +1,26 @@
+# Render Blueprint (IaC). Default name: render.yaml.
+# Docs: https://render.com/docs/blueprint-spec
+#       https://render.com/docs/infrastructure-as-code
+#
+# If THIS folder is the git root, connect the repo and leave Blueprint Path as render.yaml.
+# If the git root is higher (e.g. gen), set Blueprint Path to final/oct10/render.yaml
+# and Root Directory to final/oct10 so Docker context is this folder.
+
+services:
+  - type: web
+    name: todo-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Jwt__Issuer
+        value: TodoApi
+      - key: Jwt__Audience
+        value: TodoApi
+      # Render generates a 256-bit value. Do not bake secrets into the image.
+      - key: Jwt__Key
+        generateValue: true

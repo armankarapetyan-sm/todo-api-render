@@ -1,0 +1,115 @@
+# SHOW ONLY. Render does not read this file.
+# The live Blueprint is render.yaml. Use that to deploy.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Copy a block into a real render.yaml only if you mean it.
+
+services:
+  - type: web
+    name: example-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+
+    # Compute. Default for a new paid service is often 0.5c-512mb.
+    # free     — 0.1 CPU / 512 MB, sleeps, no zero-downtime
+    # 0.5c-512mb
+    # 1c-2g
+    plan: 1c-2g
+
+    # oregon | ohio | virginia | frankfurt | singapore
+    region: frankfurt
+
+    # Manual scale (paid). Omit on free (always 1).
+    numInstances: 1
+
+    # Paid only. Do not set this together with numInstances.
+    # scaling:
+    #   minInstances: 1
+    #   maxInstances: 3
+    #   targetCPUPercent: 60
+
+    envVars:
+      # Fixed value in git. Fine for non-secrets.
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      # You type the value in the Dashboard on first sync. Not stored in YAML.
+      - key: Jwt__Key
+        sync: false
+
+      # Another key you fill yourself at apply time.
+      - key: Jwt__Issuer
+        sync: false
+
+      # Render mints a random 256-bit string. You never paste it.
+      - key: APP_SECRET
+        generateValue: true
+
+      # Pull every key from an Environment Group you created in the Dashboard.
+      # - fromGroup: classroom-secrets
+
+      # Postgres: fromDatabase (not fromService).
+      # .NET nested config: ConnectionStrings:Default → ConnectionStrings__Default
+      - key: ConnectionStrings__Default
+        fromDatabase:
+          name: example-db
+          property: connectionString
+
+      # Same database, pieces if the app wants host/user/password separate.
+      - key: PGHOST
+        fromDatabase:
+          name: example-db
+          property: host
+      - key: PGUSER
+        fromDatabase:
+          name: example-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: example-db
+          property: password
+
+      # Key Value (Redis): lives in services, so fromService — type: keyvalue.
+      # redis is the old alias. Prefer keyvalue.
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: example-kv
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: example-kv
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: example-kv
+          property: port
+
+    # autoDeployTrigger: off
+
+  # KV is a service, not a database. ipAllowList is required.
+  # [] = private network only (other Render services in the same region).
+  - type: keyvalue
+    name: example-kv
+    plan: free
+    ipAllowList: []
+    # maxmemoryPolicy: allkeys-lru
+    # persistenceMode: off          # free has no persistence
+    # persistenceMode: journal-snapshot
+
+# Postgres is the databases: list, not services:.
+databases:
+  - name: example-db
+    plan: free
+    # postgresMajorVersion: "16"
+    # databaseName: todo
+    # user: todo
+    # region: frankfurt
+    # ipAllowList: []               # private only
+    # connectionPool: pgbouncer
+    # readReplicas:
+    #   - name: example-db-replica
